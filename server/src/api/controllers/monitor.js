@@ -1,4 +1,4 @@
-import { createMonitor } from "../../services/monitor.js";
+import { createMonitor, startMonitor } from "../../services/monitor.js";
 import { createMonitorSchema } from "../validators/monitor.js";
 
 export async function createMonitorController(req, res) {
@@ -31,3 +31,20 @@ export async function createMonitorController(req, res) {
     });
   }
 }
+
+export async function startMonitorHandler(req, res) {
+  try {
+    const { id } = req.params;
+
+    await startMonitor(req.user.id, id);
+
+    return res.status(200).json({
+      success: true
+    });
+
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({ error: "Failed to start monitor" });
+  }
+}
+
