@@ -1,0 +1,16 @@
+{
+  "name": "incident-agent-cli",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "bin": {
+    "incident-agent": "./src/cli.js"
+  },
+  "scripts": {
+    "start": "node ./src/cli.js",
+    "dev": "node --watch ./src/cli.js"
+  },
+  "dependencies": {
+    "dotenv": "^17.3.1"
+  }
+}
