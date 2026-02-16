@@ -34,7 +34,7 @@ export async function createMonitor(userId, data) {
     // retry queue push
     if (monitor.is_active) {
       await retry(() =>
-        analysisQueue.add("monitor-created", {
+        analysisQueue.add("monitor-started", {
           monitorId: monitor.id,
         }),
       );
@@ -55,10 +55,9 @@ export async function createMonitor(userId, data) {
 }
 
 export async function startMonitor(userId, monitorId) {
-
   const { rows } = await pool.query(
     "SELECT * FROM monitors WHERE id = $1 AND user_id = $2",
-    [monitorId, userId]
+    [monitorId, userId],
   );
 
   if (!rows.length) throw new Error("Monitor not found");
@@ -66,13 +65,27 @@ export async function startMonitor(userId, monitorId) {
   const monitor = rows[0];
   if (monitor.is_active) throw new Error("Monitor already active");
   else {
-    await pool.query(
-      "UPDATE monitors SET is_active = true WHERE id = $1",
-      [monitorId]
-    );
+    await pool.query("UPDATE monitors SET is_active = true WHERE id = $1", [
+      monitorId,
+    ]);
   }
 
   await analysisQueue.add("monitor-started", {
-    monitorId
+    monitorId,
   });
+}
+
+export async function pauseMonitor(userId, monitorId) {
+  const { rows } = await pool.query(
+    "SELECT * FROM monitors WHERE id = $1 AND user_id = $2",
+    [monitorId, userId],
+  );
+
+  if (!rows.length) throw new Error("Monitor not found");
+
+  await pool.query("UPDATE monitors SET is_active = false WHERE id = $1", [
+    monitorId,
+  ]);
+
+  await analysisQueue.removeJobScheduler(`monitor-${monitorId}`);
 }

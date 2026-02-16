@@ -1,4 +1,9 @@
-import { createMonitor, startMonitor } from "../../services/monitor.js";
+import {
+  createMonitor,
+  startMonitor,
+  pauseMonitor,
+} from "../../services/monitor.js";
+import { ZodError } from "zod";
 import { createMonitorSchema } from "../validators/monitor.js";
 
 export async function createMonitorController(req, res) {
@@ -11,7 +16,7 @@ export async function createMonitorController(req, res) {
       data: monitor,
     });
   } catch (error) {
-    if (error instanceof createMonitorSchema.ZodError) {
+    if (error instanceof ZodError) {
       return res.status(422).json({
         success: false,
         errors: error.errors,
@@ -32,19 +37,31 @@ export async function createMonitorController(req, res) {
   }
 }
 
-export async function startMonitorHandler(req, res) {
+export async function startMonitorController(req, res) {
   try {
-    const { id } = req.params;
+    const userId = req.user.id;
+    const monitorId = req.params.id;
 
-    await startMonitor(req.user.id, id);
+    await startMonitor(userId, monitorId);
 
     return res.status(200).json({
-      success: true
+      success: true,
     });
-
   } catch (error) {
     console.error(error);
     return res.status(500).json({ error: "Failed to start monitor" });
   }
 }
 
+export async function pauseMonitorController(req, res) {
+  try {
+    const userId = req.user.id;
+    const monitorId = req.params.id;
+
+    await pauseMonitor(userId, monitorId);
+
+    res.json({ message: "Monitor paused" });
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
+}
