@@ -89,3 +89,96 @@ export async function pauseMonitor(userId, monitorId) {
 
   await analysisQueue.removeJobScheduler(`monitor-${monitorId}`);
 }
+
+// Get all monitors for a user (with pagination)
+export async function getMonitors(userId, limit = 50, offset = 0) {
+  const { rows } = await pool.query(
+    `SELECT * FROM monitors 
+     WHERE user_id = $1 
+     ORDER BY created_at DESC 
+     LIMIT $2 OFFSET $3`,
+    [userId, limit, offset],
+  );
+  return rows;
+}
+
+// Get single monitor by ID
+export async function getMonitorById(userId, monitorId) {
+  const { rows } = await pool.query(
+    "SELECT * FROM monitors WHERE id = $1 AND user_id = $2",
+    [monitorId, userId],
+  );
+
+  if (!rows.length) throw new Error("Monitor not found");
+  return rows[0];
+}
+// Update monitor
+export async function updateMonitor(userId, monitorId, updates) {
+  const allowedFields = [
+    "name",
+    "url",
+    "method",
+    "request_header",
+    "request_body",
+    "check_interval",
+    "timeout",
+  ];
+
+  const fields = Object.keys(updates).filter((k) => allowedFields.includes(k));
+  if (!fields.length) throw new Error("No valid fields to update");
+
+  const setClause = fields.map((f, i) => `${f} = $${i + 3}`).join(", ");
+  const values = fields.map((f) => updates[f]);
+
+  const { rows } = await pool.query(
+    `UPDATE monitors 
+     SET ${setClause}, updated_at = NOW() 
+     WHERE id = $1 AND user_id = $2 
+     RETURNING *`,
+    [monitorId, userId, ...values],
+  );
+
+  if (!rows.length) throw new Error("Monitor not found");
+  return rows[0];
+}
+
+// Delete monitor
+export async function deleteMonitor(userId, monitorId) {
+  // First pause it (remove scheduler)
+  try {
+    await pauseMonitor(userId, monitorId);
+  } catch (err) {
+    // Already paused or not found, continue
+  }
+
+  const { rowCount } = await pool.query(
+    "DELETE FROM monitors WHERE id = $1 AND user_id = $2",
+    [monitorId, userId],
+  );
+
+  if (!rowCount) throw new Error("Monitor not found");
+}
+
+export async function resumeMonitor(userId, monitorId) {
+  return startMonitor(userId, monitorId);
+}
+// Get monitor check history
+export async function getMonitorHistory(
+  monitorId,
+  userId,
+  limit = 100,
+  offset = 0,
+) {
+  // Verify ownership
+  await getMonitorById(userId, monitorId);
+
+  const { rows } = await pool.query(
+    `SELECT * FROM monitor_checks 
+     WHERE monitor_id = $1 
+     ORDER BY checked_at DESC 
+     LIMIT $2 OFFSET $3`,
+    [monitorId, limit, offset],
+  );
+
+  return rows;
+}
