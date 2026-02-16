@@ -8,7 +8,7 @@ import {
   startMonitorController,
   pauseMonitorController,
   resumeMonitorController,
-  getMonitorHistoryController
+  getMonitorHistoryController,
 } from "../controllers/monitor.js";
 
 const router = express.Router();

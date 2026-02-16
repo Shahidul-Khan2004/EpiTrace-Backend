@@ -89,30 +89,42 @@ async function performCheck(monitorId) {
 
     console.log("HTTP status:", response.status);
     const isUp = response.status >= 200 && response.status < 400;
+    const responseTimeMs = response.headers["x-response-time"] || null;
 
+    // Insert check record
     await pool.query(
-      `
-      UPDATE monitors
-      SET status = $1,
-          last_checked_at = NOW()
-      WHERE id = $2
-      `,
+      `INSERT INTO monitor_checks 
+   (monitor_id, status, response_time_ms, status_code) 
+   VALUES ($1, $2, $3, $4)`,
+      [monitorId, isUp ? "UP" : "DOWN", responseTimeMs, response.status],
+    );
+
+    // Update monitor current status
+    await pool.query(
+      `UPDATE monitors
+   SET status = $1, last_checked_at = NOW()
+   WHERE id = $2`,
       [isUp ? "UP" : "DOWN", monitorId],
     );
 
     console.log(`Monitor ${monitorId} status: ${isUp ? "UP" : "DOWN"}`);
   } catch (error) {
+    // Insert failed check
     await pool.query(
-      `
-      UPDATE monitors
-      SET status = 'DOWN',
-          last_checked_at = NOW()
-      WHERE id = $1
-      `,
+      `INSERT INTO monitor_checks 
+     (monitor_id, status, error_message) 
+     VALUES ($1, 'DOWN', $2)`,
+      [monitorId, error.message],
+    );
+
+    await pool.query(
+      `UPDATE monitors
+     SET status = 'DOWN', last_checked_at = NOW()
+     WHERE id = $1`,
       [monitorId],
     );
 
-    console.log(`Monitor ${monitorId} status: DOWN (error)`);
+    console.log(`Monitor ${monitorId} status: DOWN (error: ${error.message})`);
   }
 }
 
