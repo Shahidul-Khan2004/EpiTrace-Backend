@@ -25,6 +25,8 @@ echo "Waking up agent 'cline' to do the job..."
 
 AGENT_RESULT=$(cline -y "Please check the following error: $ERROR_MSG at this endpoint: $ENDPOINT . after finding the error write a analysis on why this error is coming")
 
+rm -rf workspace
+
 echo ":::FINAL_ANALYSIS:::"
 echo "$AGENT_RESULT"
 
