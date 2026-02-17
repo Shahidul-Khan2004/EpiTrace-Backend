@@ -1,0 +1,20 @@
+{
+  "name": "vmserver",
+  "version": "1.0.0",
+  "description": "Worker for ai-analysis jobs",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js",
+    "dev": "node --watch index.js",
+    "test": "echo \"No tests configured\""
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "dependencies": {
+    "bullmq": "^5.69.1",
+    "dotenv": "^16.6.1",
+    "ioredis": "^5.9.3"
+  }
+}
