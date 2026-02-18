@@ -18,6 +18,7 @@ const agent_worker = new Worker(
       `Monitor failure${Job.data.status_code ? ` (HTTP ${Job.data.status_code})` : ""}`;
     const endpoint = Job.data.endpoint || Job.data.url;
     const git_hub_repo = Job.data.git_hub_repo || Job.data.repo_link;
+    
 
     const missingFields = [];
     if (!error_message) missingFields.push("error_message");
