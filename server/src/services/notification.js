@@ -1,16 +1,20 @@
 import axios from "axios";
+import { pool } from "../config/db.js";
 
 /**
  * Format and send alert to Slack
  */
-async function sendToSlack(data) {
-  const slackUrl = process.env.SLACK_WEBHOOK_URL;
-  if (!slackUrl) throw new Error("SLACK_WEBHOOK_URL not configured");
+async function sendToSlack(data, webhookUrl) {
+  if (!webhookUrl) throw new Error("Webhook URL not configured");
 
-  const isAiAlert = data.jobId !== undefined || data.git_hub_repo !== undefined;
+  const isAiAlert =
+    data.monitorId !== undefined ||
+    data.jobId !== undefined ||
+    data.git_hub_repo !== undefined;
 
   if (isAiAlert && !data.extractedAnalysis) {
     const aiErrorMessage = data.error_message || "Analysis failed";
+    const endpointUrl = data.endpoint || data.url;
     const payload = {
       attachments: [
         {
@@ -22,6 +26,9 @@ async function sendToSlack(data) {
               value: String(data.jobId),
               short: true,
             },
+            ...(endpointUrl
+              ? [{ title: "Endpoint", value: endpointUrl, short: false }]
+              : []),
             {
               title: "Error",
               value: aiErrorMessage,
@@ -39,10 +46,11 @@ async function sendToSlack(data) {
       ],
     };
 
-    return axios.post(slackUrl, payload);
+    return axios.post(webhookUrl, payload);
   }
 
   if (data.extractedAnalysis) {
+    const endpointUrl = data.endpoint || data.url;
     const payload = {
       attachments: [
         {
@@ -54,6 +62,9 @@ async function sendToSlack(data) {
               value: String(data.jobId),
               short: true,
             },
+            ...(endpointUrl
+              ? [{ title: "Endpoint", value: endpointUrl, short: false }]
+              : []),
             ...(data.error_message
               ? [{ title: "Error", value: data.error_message, short: false }]
               : []),
@@ -74,7 +85,7 @@ async function sendToSlack(data) {
       ],
     };
 
-    return axios.post(slackUrl, payload);
+    return axios.post(webhookUrl, payload);
   }
 
   throw new Error("Unsupported alert payload: expected AI analysis data");
@@ -83,14 +94,17 @@ async function sendToSlack(data) {
 /**
  * Format and send alert to Discord
  */
-async function sendToDiscord(data) {
-  const discordUrl = process.env.DISCORD_WEBHOOK_URL;
-  if (!discordUrl) throw new Error("DISCORD_WEBHOOK_URL not configured");
+async function sendToDiscord(data, webhookUrl) {
+  if (!webhookUrl) throw new Error("Discord webhook URL not configured");
 
-  const isAiAlert = data.jobId !== undefined || data.git_hub_repo !== undefined;
+  const isAiAlert =
+    data.monitorId !== undefined ||
+    data.jobId !== undefined ||
+    data.git_hub_repo !== undefined;
 
   if (isAiAlert && !data.extractedAnalysis) {
     const aiErrorMessage = data.error_message || "Analysis failed";
+    const endpointUrl = data.endpoint || data.url;
     const payload = {
       embeds: [
         {
@@ -102,6 +116,9 @@ async function sendToDiscord(data) {
               value: String(data.jobId),
               inline: true,
             },
+            ...(endpointUrl
+              ? [{ name: "Endpoint", value: endpointUrl, inline: false }]
+              : []),
             {
               name: "Error",
               value: aiErrorMessage,
@@ -119,10 +136,11 @@ async function sendToDiscord(data) {
       ],
     };
 
-    return axios.post(discordUrl, payload);
+    return axios.post(webhookUrl, payload);
   }
 
   if (data.extractedAnalysis) {
+    const endpointUrl = data.endpoint || data.url;
     const payload = {
       embeds: [
         {
@@ -134,6 +152,9 @@ async function sendToDiscord(data) {
               value: String(data.jobId),
               inline: true,
             },
+            ...(endpointUrl
+              ? [{ name: "Endpoint", value: endpointUrl, inline: false }]
+              : []),
             ...(data.error_message
               ? [{ name: "Error", value: data.error_message, inline: false }]
               : []),
@@ -154,23 +175,37 @@ async function sendToDiscord(data) {
       ],
     };
 
-    return axios.post(discordUrl, payload);
+    return axios.post(webhookUrl, payload);
   }
 
   throw new Error("Unsupported alert payload: expected AI analysis data");
+}
+
+async function getMonitorNotificationSettings(monitorId) {
+  const { rows } = await pool.query(
+    "SELECT notification_provider, notification_webhook_url FROM monitors WHERE id = $1",
+    [monitorId],
+  );
+
+  if (!rows.length) throw new Error("Monitor not found");
+
+  return rows[0];
 }
 
 /**
  * Send alert to configured provider
  */
 export async function sendAlert(data) {
-  const provider = process.env.NOTIFICATION_PROVIDER || "slack";
+  const { notification_provider, notification_webhook_url } =
+    await getMonitorNotificationSettings(data.monitorId);
 
-  if (provider === "slack") {
-    return sendToSlack(data);
-  } else if (provider === "discord") {
-    return sendToDiscord(data);
+  if (notification_provider === "slack") {
+    return sendToSlack(data, notification_webhook_url);
+  } else if (notification_provider === "discord") {
+    return sendToDiscord(data, notification_webhook_url);
   } else {
-    throw new Error(`Unknown notification provider: ${provider}`);
+    throw new Error(
+      `Unknown notification provider: ${notification_provider}`,
+    );
   }
 }

@@ -4,6 +4,8 @@ export const createMonitorSchema = z.object({
   name: z.string().min(1, "Name is required"),
   url: z.string().url("Invalid URL format"),
   repo_link: z.string().url("Invalid repo link format"),
+  notification_provider: z.enum(["slack", "discord"]),
+  notification_webhook_url: z.string().url("Invalid webhook URL format"),
   method: z.enum(
     ["GET", "POST", "PUT", "DELETE", "PATCH"],
     "Invalid HTTP method",
@@ -22,6 +24,8 @@ export const updateMonitorSchema = z.object({
   name: z.string().min(1).optional(),
   url: z.string().url().optional(),
   repo_link: z.string().url().optional(),
+  notification_provider: z.enum(["slack", "discord"]).optional(),
+  notification_webhook_url: z.string().url().optional(),
   method: z.enum(["GET", "POST", "PUT", "DELETE", "PATCH"]).optional(),
   request_header: z.record(z.any()).optional(),
   request_body: z.any().optional(),

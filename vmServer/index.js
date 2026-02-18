@@ -62,6 +62,8 @@ const agent_worker = new Worker(
               jobId: Job.id,
               git_hub_repo,
               error_message,
+              monitorId: Job.data.monitorId,
+              endpoint,
             });
             console.log(`Analysis sent to ${ALERT_ENDPOINT} with status ${response.status}`);
             resolve(finalAnalysis);
