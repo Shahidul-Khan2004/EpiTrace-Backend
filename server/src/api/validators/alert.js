@@ -15,6 +15,8 @@ const analysisAlertSchema = z.object({
   jobId: z.union([z.string(), z.number()]),
   git_hub_repo: z.string().url(),
   error_message: z.string().optional(),
+  monitorId: z.string().uuid(),
+  endpoint: z.string().url().optional(),
 });
 
 export const sendAlertSchema = z.union([analysisAlertSchema, monitorAlertSchema]);
