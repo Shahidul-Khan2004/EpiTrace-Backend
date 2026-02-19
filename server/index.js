@@ -9,6 +9,7 @@ import healthRouter from "./src/api/routes/health.js";
 import authRouter from "./src/api/routes/auth.js";
 import monitorRouter from "./src/api/routes/monitor.js";
 import webhookRouter from "./src/api/routes/webhook.js";
+import githubTokenRouter from "./src/api/routes/githubToken.js";
 import alertRouter from "./src/api/routes/alert.js";
 
 const app = express();
@@ -39,6 +40,7 @@ app.use("/alert", alertRouter);
 app.use(requireAuth); // Protect all routes below this middleware
 app.use("/monitor", monitorRouter);
 app.use("/webhook", webhookRouter);
+app.use("/github-token", githubTokenRouter);
 
 app.listen(PORT, () => {
   console.log(`Server is running on http://localhost:${PORT}`);

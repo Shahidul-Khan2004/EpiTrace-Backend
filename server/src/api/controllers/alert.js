@@ -3,6 +3,7 @@ import { sendAlertSchema } from "../validators/alert.js";
 import { sendAlert } from "../../services/notification.js";
 import { connection } from "../../config/redis.js";
 import { codeQueue } from "../../queue/codeQueue.js";
+import { getActiveGithubTokenForMonitor } from "../../services/githubToken.js";
 
 export async function sendAlertController(req, res) {
   try {
@@ -49,8 +50,42 @@ export async function triggerCodeAgentController(req, res) {
     }
 
     const payload = JSON.parse(rawPayload);
-    const queueJob = await codeQueue.add("code-job", payload, {
-      jobId: `code-agent:${jobId}`,
+    if (!payload.monitorId) {
+      return res.status(400).json({
+        success: false,
+        error: "monitorId is missing in trigger payload",
+      });
+    }
+
+    let githubToken = null;
+    try {
+      githubToken = await getActiveGithubTokenForMonitor(payload.monitorId);
+    } catch (tokenError) {
+      console.error(
+        `Failed to fetch GitHub token for monitor ${payload.monitorId}:`,
+        tokenError.message,
+      );
+      return res.status(503).json({
+        success: false,
+        error: "Failed to fetch GitHub token",
+      });
+    }
+
+    if (!githubToken) {
+      return res.status(400).json({
+        success: false,
+        error: "No active GitHub token associated with this monitor",
+      });
+    }
+
+    const queuePayload = {
+      ...payload,
+      github_access_token: githubToken,
+    };
+
+    const safeJobId = `code-agent-${jobId}`.replace(/[^a-zA-Z0-9_-]/g, "_");
+    const queueJob = await codeQueue.add("code-job", queuePayload, {
+      jobId: safeJobId,
     });
 
     return res.status(202).json({

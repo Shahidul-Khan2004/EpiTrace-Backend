@@ -43,3 +43,14 @@ export const updateWebhookSchema = z.object({
 }).refine(data => Object.keys(data).length > 0, {
   message: "At least one field must be provided",
 });
+
+export const createGithubTokenSchema = z.object({
+  access_token: z.string().min(1, "GitHub access token is required"),
+});
+
+export const updateGithubTokenSchema = z.object({
+  access_token: z.string().min(1).optional(),
+  is_active: z.boolean().optional(),
+}).refine(data => Object.keys(data).length > 0, {
+  message: "At least one field must be provided",
+});

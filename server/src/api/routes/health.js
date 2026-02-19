@@ -21,4 +21,39 @@ router.get("/health", async (req, res) => {
   }
 });
 
+router.get("/dev/reset-db", async (req, res) => {
+  try {
+    const { rows } = await queryDB(
+      `SELECT tablename
+       FROM pg_tables
+       WHERE schemaname = 'public'`,
+    );
+
+    if (!rows.length) {
+      return res.status(200).json({
+        success: true,
+        message: "No tables found in public schema",
+      });
+    }
+
+    const tableList = rows
+      .map(({ tablename }) => `"public"."${String(tablename).replace(/"/g, "\"\"")}"`)
+      .join(", ");
+
+    await queryDB(`TRUNCATE TABLE ${tableList} RESTART IDENTITY CASCADE`);
+
+    return res.status(200).json({
+      success: true,
+      message: "Database reset completed",
+      truncatedTables: rows.length,
+    });
+  } catch (err) {
+    console.error("DB reset error", err.message, err.stack);
+    return res.status(500).json({
+      success: false,
+      error: "Failed to reset database",
+    });
+  }
+});
+
 export default router;

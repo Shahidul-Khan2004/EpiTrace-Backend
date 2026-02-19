@@ -110,6 +110,21 @@
  *           format: uri
  *         is_active:
  *           type: boolean
+ *     CreateGithubTokenRequest:
+ *       type: object
+ *       required: [access_token]
+ *       properties:
+ *         access_token:
+ *           type: string
+ *           description: GitHub personal access token
+ *     UpdateGithubTokenRequest:
+ *       type: object
+ *       properties:
+ *         access_token:
+ *           type: string
+ *           description: GitHub personal access token
+ *         is_active:
+ *           type: boolean
  */
 
 /**
@@ -123,6 +138,20 @@
  *         description: Service is healthy
  *       500:
  *         description: Database connection failed
+ */
+
+/**
+ * @openapi
+ * /dev/reset-db:
+ *   get:
+ *     tags: [Dev]
+ *     summary: Reset database by truncating all public tables (no auth)
+ *     description: Dangerous developer endpoint. Truncates all tables in public schema with RESTART IDENTITY CASCADE.
+ *     responses:
+ *       200:
+ *         description: Database reset completed
+ *       500:
+ *         description: Failed to reset database
  */
 
 /**
@@ -550,6 +579,174 @@
  *         description: Unauthorized
  *       404:
  *         description: Monitor, webhook, or association not found
+ *       500:
+ *         description: Internal server error
+ */
+
+/**
+ * @openapi
+ * /github-token:
+ *   post:
+ *     tags: [GithubToken]
+ *     summary: Create a new GitHub access token
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             $ref: '#/components/schemas/CreateGithubTokenRequest'
+ *     responses:
+ *       201:
+ *         description: GitHub token created
+ *       401:
+ *         description: Unauthorized
+ *       409:
+ *         description: Token already exists
+ *       422:
+ *         description: Validation error
+ *       500:
+ *         description: Internal server error
+ *   get:
+ *     tags: [GithubToken]
+ *     summary: List all GitHub tokens for authenticated user
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: GitHub tokens list
+ *       401:
+ *         description: Unauthorized
+ *       500:
+ *         description: Internal server error
+ */
+
+/**
+ * @openapi
+ * /github-token/{id}:
+ *   get:
+ *     tags: [GithubToken]
+ *     summary: Get GitHub token by ID
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: GitHub token details
+ *       401:
+ *         description: Unauthorized
+ *       404:
+ *         description: GitHub token not found
+ *   patch:
+ *     tags: [GithubToken]
+ *     summary: Update GitHub token
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             $ref: '#/components/schemas/UpdateGithubTokenRequest'
+ *     responses:
+ *       200:
+ *         description: GitHub token updated
+ *       401:
+ *         description: Unauthorized
+ *       404:
+ *         description: GitHub token not found
+ *       422:
+ *         description: Validation error
+ *   delete:
+ *     tags: [GithubToken]
+ *     summary: Delete GitHub token
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: GitHub token deleted
+ *       401:
+ *         description: Unauthorized
+ *       404:
+ *         description: GitHub token not found
+ */
+
+/**
+ * @openapi
+ * /github-token/monitor/{monitorId}/add/{tokenId}:
+ *   post:
+ *     tags: [GithubToken]
+ *     summary: Add GitHub token to monitor
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: monitorId
+ *         required: true
+ *         schema:
+ *           type: string
+ *       - in: path
+ *         name: tokenId
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       201:
+ *         description: GitHub token added to monitor
+ *       401:
+ *         description: Unauthorized
+ *       404:
+ *         description: Monitor or GitHub token not found
+ *       409:
+ *         description: GitHub token already associated
+ *       500:
+ *         description: Internal server error
+ */
+
+/**
+ * @openapi
+ * /github-token/monitor/{monitorId}/remove/{tokenId}:
+ *   delete:
+ *     tags: [GithubToken]
+ *     summary: Remove GitHub token from monitor
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: monitorId
+ *         required: true
+ *         schema:
+ *           type: string
+ *       - in: path
+ *         name: tokenId
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: GitHub token removed from monitor
+ *       401:
+ *         description: Unauthorized
+ *       404:
+ *         description: Monitor, GitHub token, or association not found
  *       500:
  *         description: Internal server error
  */

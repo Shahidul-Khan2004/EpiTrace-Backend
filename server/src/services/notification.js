@@ -20,6 +20,7 @@ async function createAgentTriggerLink(data) {
     const triggerPayload = {
       agent_message: data.extractedAnalysis,
       git_hub_repo: data.git_hub_repo,
+      monitorId: data.monitorId,
     };
     await connection.setex(triggerKey, 24 * 60 * 60, JSON.stringify(triggerPayload));
 

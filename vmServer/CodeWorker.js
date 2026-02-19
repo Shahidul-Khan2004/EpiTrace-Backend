@@ -15,10 +15,12 @@ const coder_agent = new Worker(
   async (Job) => {
     const agent_message = Job.data.agent_message;
     const git_hub_repo = Job.data.git_hub_repo;
+    const github_access_token = Job.data.github_access_token
 
     const missingFields = [];
     if (!agent_message) missingFields.push("agent_message");
     if (!git_hub_repo) missingFields.push("git_hub_repo");
+    if(!github_access_token) missingFields.push("github_access_token");
     if (missingFields.length) {
       throw new Error(
         `Job ${Job.id} is missing required data: ${missingFields.join(", ")}. Payload=${JSON.stringify(
@@ -28,7 +30,7 @@ const coder_agent = new Worker(
     }
 
     return new Promise((resolve, reject) => {
-      const child = spawn("bash", ["cline-code-job.sh", agent_message, git_hub_repo]);
+      const child = spawn("bash", ["cline-code-job.sh", agent_message, git_hub_repo,github_access_token]);
 
       let fullLogOutput = "";
 

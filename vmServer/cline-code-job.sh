@@ -2,16 +2,23 @@
 
 set -euo pipefail
 
+export GH_PROMPT_DISABLED=1
+
 agent_message="${1:-}"
 REPO_URL="${2:-}"
+TOKEN="${3:-}"
+TOKEN="$(printf '%s' "$TOKEN" | tr -d '\r\n')"
 
-# FIX 1: Corrected syntax for OR (||) check
-if [[ -z "$agent_message" || -z "$REPO_URL" ]]; then
-  echo "Error: message or repo url missing" >&2
+# FIX 1: Ensure required inputs exist
+if [[ -z "$agent_message" || -z "$REPO_URL" || -z "$TOKEN" ]]; then
+  echo "Error: message, repo url, or github token missing" >&2
   exit 1
 fi
 
 echo "--- Starting New Job ---"
+
+GIT_AUTH_B64="$(printf 'x-access-token:%s' "$TOKEN" | base64 | tr -d '\n')"
+GIT_AUTH_HEADER="Authorization: Basic $GIT_AUTH_B64"
 
 JOB_DIR="$(mktemp -d "${TMPDIR:-/tmp}/vm-worker-XXXXXX")"
 REPO_DIR="$JOB_DIR/repo"
@@ -25,7 +32,7 @@ mkdir -p "$REPO_DIR"
 cd "$REPO_DIR"
 
 echo "Cloning repository..."
-git clone "$REPO_URL" .
+git -c http.extraHeader="$GIT_AUTH_HEADER" clone "$REPO_URL" .
 
 BRANCH_NAME="agent-fix-$(openssl rand -hex 4)"
 git checkout -b "$BRANCH_NAME"
@@ -43,17 +50,28 @@ if [ -n "$(git status --porcelain)" ]; then
 
   git add .
   git commit -m "$COMMIT_MSG"
-  git push origin "$BRANCH_NAME"
+  git -c http.extraHeader="$GIT_AUTH_HEADER" push origin "$BRANCH_NAME"
 
-  COMMIT_HASH=$(git rev-parse HEAD)
+  
   
   # FIX 4: Calculated WEB_URL (it was missing before, which would crash the echo below)
-  WEB_URL=${REPO_URL%.git}
+  echo "Creating Pull Request..."
+  PR_URL=$(GH_TOKEN="$TOKEN" gh pr create \
+    --repo "$REPO_URL" \
+    --title "$COMMIT_MSG" \
+    --body "Automated fix by Agent.
+    **Triggered by Error:**
+    \`$agent_message\`" \
+    --head "$BRANCH_NAME" \
+    --base "main")
 
-  echo ":::COMMIT_LINK:::"
-  echo "$WEB_URL/commit/$COMMIT_HASH"
-  echo ":::PR_BRANCH:::"
-  echo "$BRANCH_NAME"
+
+    echo ":::PR_LINK:::"
+    echo "$PR_URL"
+    echo ":::PR_BRANCH:::"
+    echo "$BRANCH_NAME"
+
+  
 else
   echo "No changes were made by the agent."
 fi
