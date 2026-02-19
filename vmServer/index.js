@@ -82,6 +82,6 @@ const agent_worker = new Worker(
   {
     // BullMQ options: Make sure it connects to your Redis instance!
     connection: myRedisConnection,
-    concurrency: 10
+    concurrency: 5
   }
 ); // <-- Closes the
