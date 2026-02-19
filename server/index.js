@@ -14,6 +14,9 @@ import alertRouter from "./src/api/routes/alert.js";
 
 const app = express();
 const PORT = process.env.PORT || 8080;
+const SERVER_PUBLIC_URL = (
+  process.env.SERVER_PUBLIC_URL || `http://localhost:${PORT}`
+).replace(/\/$/, "");
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
@@ -25,7 +28,7 @@ const swaggerSpec = swaggerJsdoc({
       version: "1.0.0",
       description: "API documentation for EpiTrace backend services",
     },
-    servers: [{ url: `http://localhost:${PORT}` }],
+    servers: [{ url: SERVER_PUBLIC_URL }],
   },
   apis: [join(__dirname, "src/docs/swagger.js")],
 });
