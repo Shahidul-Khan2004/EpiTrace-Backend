@@ -68,6 +68,8 @@ async function performCheck(monitorId) {
     return;
   }
 
+  const startedAt = Date.now();
+
   try {
     const method = monitor.method.toUpperCase();
     const headers = {
@@ -87,9 +89,10 @@ async function performCheck(monitorId) {
       validateStatus: () => true, // don't throw on 4xx/5xx
     });
 
+    const responseTimeMs = Date.now() - startedAt;
+
     console.log("HTTP status:", response.status);
     const isUp = response.status >= 200 && response.status < 400;
-    const responseTimeMs = response.headers["x-response-time"] || null;
 
     // Insert check record
     await pool.query(
@@ -137,12 +140,14 @@ async function performCheck(monitorId) {
 
     console.log(`Monitor ${monitorId} status: ${isUp ? "UP" : "DOWN"}`);
   } catch (error) {
+    const responseTimeMs = Date.now() - startedAt;
+
     // Insert failed check
     await pool.query(
       `INSERT INTO monitor_checks 
-     (monitor_id, status, error_message) 
-     VALUES ($1, 'DOWN', $2)`,
-      [monitorId, error.message],
+     (monitor_id, status, error_message, response_time_ms) 
+     VALUES ($1, 'DOWN', $2, $3)`,
+      [monitorId, error.message, responseTimeMs],
     );
 
     console.log(
