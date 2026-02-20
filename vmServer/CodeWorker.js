@@ -21,6 +21,12 @@ function isUnitTestLog(line) {
   );
 }
 
+function isBenignStderrLine(line) {
+  return /^(cloning into|switched to a new branch|remote:|to https?:\/\/|\* \[new branch\]|task started:)/i.test(
+    line,
+  );
+}
+
 async function publishLog(payload) {
   try {
     await axios.post(CODE_LOG_ENDPOINT, payload, { timeout: 2500 });
@@ -98,10 +104,12 @@ const coder_agent = new Worker(
         console.error(`[Error/Warning]: ${data.toString().trim()}`);
         const lines = parseLines(data);
         for (const line of lines) {
+          const isTest = isUnitTestLog(line);
+          const benign = isBenignStderrLine(line);
           publishLog({
-            level: "error",
-            stage: isUnitTestLog(line) ? "tests" : "agent",
-            category: isUnitTestLog(line) ? "unit_test" : "runtime",
+            level: benign ? "info" : "error",
+            stage: isTest ? "tests" : "agent",
+            category: isTest ? "unit_test" : "runtime",
             jobId: Job.id,
             repo: git_hub_repo,
             message: line,
@@ -130,15 +138,18 @@ const coder_agent = new Worker(
           repo: git_hub_repo,
           message: "Script execution completed successfully.",
         });
-        const commitLinkChunk = fullLogOutput.split(":::COMMIT_LINK:::")[1];
-        const linkLine = commitLinkChunk
-          ? commitLinkChunk
-              .trim()
-              .split("\n")
-              .map((line) => line.trim())
-              .find((line) => /^https?:\/\//.test(line))
-          : "";
-        const commit_link = linkLine || "";
+        const markerMatch = fullLogOutput.match(/:::(COMMIT_LINK|PR_LINK):::/);
+        let commit_link = "";
+        if (markerMatch) {
+          const marker = markerMatch[0];
+          const chunk = fullLogOutput.split(marker)[1] || "";
+          const linkLine = chunk
+            .trim()
+            .split("\n")
+            .map((line) => line.trim())
+            .find((line) => /^https?:\/\//.test(line));
+          commit_link = linkLine || "";
+        }
 
         if (!commit_link) {
           await publishLog({
